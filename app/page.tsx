@@ -69,6 +69,7 @@ const GAME_DURATION_MS = 3 * 60 * 1000 // 3 minutes
 
 export default function NoeAlEspacioGame() {
   const [score, setScore] = useState(0)
+  const [amount, setAmount] = useState(0) // New state for airdrop amount
   const [highScores, setHighScores] = useState<number[]>([])
   const [rocketLaunched, setRocketLaunched] = useState(false)
   const [randomCuriosity, setRandomCuriosity] = useState(getRandomFunFact())
@@ -251,6 +252,7 @@ export default function NoeAlEspacioGame() {
     frameCounter.current = 0
     keysPressed.current = {}
     setScore(0)
+    setAmount(0) // Reset amount
     setRocketLaunched(false)
     setIsMovingLeft(false)
     setIsMovingRight(false)
@@ -277,7 +279,7 @@ export default function NoeAlEspacioGame() {
     floatingTexts.current.push({ id: Date.now() + Math.random(), x, y, text: `+${points}`, opacity: 1 })
   }
 
-  const triggerAirdrop = async (address: string) => {
+  const triggerAirdrop = async (address: string, airdropAmount: number) => {
     if (isAirdropping) return;
 
     const now = Date.now();
@@ -291,11 +293,10 @@ export default function NoeAlEspacioGame() {
     }
 
     setIsAirdropping(true);
-    setHasClaimedTokens(true) // Mark as claimed immediately to prevent re-triggers
-    const amount = 30
-
-    console.log(`Attempting to airdrop ${amount} tokens to ${address}...`)
-
+    setHasClaimedTokens(true);
+    
+    console.log(`Attempting to airdrop ${airdropAmount} tokens to ${address}...`);
+    
     try {
       const response = await fetch("https://soma-backend-yvhf.onrender.com/airdrop", {
         method: "POST",
@@ -304,34 +305,34 @@ export default function NoeAlEspacioGame() {
         },
         body: JSON.stringify({
           recipients: [address],
-          amounts: [amount.toString()],
+          amounts: [airdropAmount.toString()],
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
         setLastAirdropTime(now);
         toast({
           title: "Success!",
-          description: "Your amount has been transferred to your wallet!",
-        })
-        console.log("Airdrop successful:", data.transactionHash)
+          description: "Your tokens have been transferred to your wallet!",
+        });
+        console.log("Airdrop successful:", data.transactionHash);
       } else {
         toast({
           title: "Airdrop Failed",
           description: data.message || "The token transfer failed. Please try again later.",
           variant: "destructive",
-        })
-        console.error("Airdrop failed:", data)
+        });
+        console.error("Airdrop failed:", data);
       }
     } catch (error) {
       toast({
         title: "Airdrop Error",
         description: "Could not connect to the airdrop service.",
         variant: "destructive",
-      })
-      console.error("Error calling airdrop API:", error)
+      });
+      console.error("Error calling airdrop API:", error);
     } finally {
       setIsAirdropping(false);
     }
@@ -341,31 +342,17 @@ export default function NoeAlEspacioGame() {
     (objType: string, objX: number, objY: number) => {
       if (objType === "junk") {
         playCollisionSound()
+        setAmount(score / 100) // Set amount when game ends
         setGameState("gameOver")
         updateHighScores(score)
       } else {
         playCollectSound()
         const points = objType === "mate" ? 20 : 30
-        const newScore = score + points
-        setScore(newScore)
+        setScore((prevScore) => prevScore + points)
         addFloatingText(objX, objY, points)
-
-        // Check if score crosses the threshold and tokens haven't been claimed yet
-        if (newScore >= 40 && !hasClaimedTokens) {
-          if (userAddress) {
-            triggerAirdrop(userAddress)
-          } else {
-            console.warn("Cannot trigger airdrop. User not connected.")
-            toast({
-              title: "Connect Wallet",
-              description: "Connect your wallet to claim rewards!",
-              variant: "destructive",
-            })
-          }
-        }
       }
     },
-    [score, hasClaimedTokens, userAddress, playCollisionSound, playCollectSound, updateHighScores, toast],
+    [score, playCollisionSound, playCollectSound, updateHighScores],
   )
 
   const gameLoop = useCallback(() => {
@@ -458,6 +445,7 @@ export default function NoeAlEspacioGame() {
       .map((p) => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, rotation: p.rotation + p.rotationSpeed, vy: p.vy + 0.1 }))
       .filter((p) => p.y < 110)
     if (rocketLaunched && gameTime.current >= GAME_DURATION_MS) {
+      setAmount(score / 100) // Set amount when game ends (win)
       setGameState("win")
       updateHighScores(score)
       playVictorySound()
@@ -697,23 +685,11 @@ export default function NoeAlEspacioGame() {
                   🧑‍🚀 Start Game
                 </button>
                 <button
-                  onClick={() => {
-                    if (userAddress) {
-                      triggerAirdrop(userAddress);
-                    }
-                  }}
-                  disabled={!userAddress || isAirdropping}
-                  className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 md:py-5 px-4 md:px-8 rounded-xl text-lg md:text-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl transform disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isAirdropping ? <LoadingSpinner /> : "💧 Claim Airdrop"}
-                </button>
-                <button
                   onClick={() => setShowImportGuide(true)}
                   className="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 md:py-5 px-4 md:px-8 rounded-xl text-lg md:text-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl transform"
                 >
                   ℹ️ How to Import SOMACOIN
                 </button>
-                
                 <div className="border-t border-white/20 my-1 md:my-2"></div>
                 <div className="flex-1 animate-scale-in opacity-0 [animation-delay:1s]">
                   <h2 className="text-lg md:text-2xl font-bold text-sky-300 mb-3 md:mb-6 flex items-center gap-2">
@@ -773,8 +749,12 @@ export default function NoeAlEspacioGame() {
             <p className="mb-2">Made with love by</p>
             <div className="flex justify-center items-center gap-4">
               <a href="https://x.com/therapyorme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
-                <img src="https://unavatar.io/twitter/therapyorme" alt="therapyorme avatar" className="w-8 h-8 rounded-full" />
+                <img src="https://pbs.twimg.com/profile_images/1931748920436076544/yuERHaaD_400x400.jpg" alt="therapyorme avatar" className="w-8 h-8 rounded-full" />
                 @therapyorme
+              </a>
+              <a href="https://x.com/callmeveizir" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
+                <img src="https://pbs.twimg.com/profile_images/1898650752383623168/nKiI9kYf_400x400.jpg" alt="callmeveizir avatar" className="w-8 h-8 rounded-full" />
+                @callmeveizir
               </a>
             </div>
           </footer>
@@ -846,12 +826,34 @@ export default function NoeAlEspacioGame() {
         </h1>
         <p className="text-lg md:text-3xl mb-2 md:mb-4 text-gray-300">{message}</p>
         <p className="text-xl md:text-4xl font-bold text-yellow-400 mb-6 md:mb-12">🏆 Final Score: {score}</p>
-        <button
-          onClick={goToHome}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-2 md:py-4 px-6 md:px-12 rounded-xl text-base md:text-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-        >
-          🏠 Back to Home
-        </button>
+        <p className="text-lg md:text-2xl mb-4 md:mb-8 text-teal-300">
+          Earned: {amount.toFixed(2)} SOMACOIN
+        </p>
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => {
+              if (userAddress) {
+                triggerAirdrop(userAddress, amount)
+              } else {
+                toast({
+                  title: "Connect Wallet",
+                  description: "Connect your wallet to claim rewards!",
+                  variant: "destructive",
+                })
+              }
+            }}
+            disabled={!userAddress || isAirdropping || hasClaimedTokens || amount === 0}
+            className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-2 md:py-4 px-6 md:px-12 rounded-xl text-base md:text-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAirdropping ? <LoadingSpinner /> : "💧 Claim Airdrop"}
+          </button>
+          <button
+            onClick={goToHome}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-2 md:py-4 px-6 md:px-12 rounded-xl text-base md:text-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+          >
+            🏠 Back to Home
+          </button>
+        </div>
       </div>
     </div>
   )
