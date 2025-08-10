@@ -292,7 +292,7 @@ export default function NoeAlEspacioGame() {
 
     setIsAirdropping(true);
     setHasClaimedTokens(true) // Mark as claimed immediately to prevent re-triggers
-    const amount = 700
+    const amount = 30
 
     console.log(`Attempting to airdrop ${amount} tokens to ${address}...`)
 
@@ -717,11 +717,11 @@ export default function NoeAlEspacioGame() {
                 <div className="border-t border-white/20 my-1 md:my-2"></div>
                 <div className="flex-1 animate-scale-in opacity-0 [animation-delay:1s]">
                   <h2 className="text-lg md:text-2xl font-bold text-sky-300 mb-3 md:mb-6 flex items-center gap-2">
-                    💡 What is Somanaut (this game)?
+                    💡 What is Somanaut?
                   </h2>
                   <div>
                     <p className="text-xs md:text-sm leading-relaxed text-gray-200 mb-4">
-                      somanaut is not a cryptocurrency its a game that you play to earn
+                      SOMANAUT is a revolutionary fun to play game that earns you money to play. Forget about paying for games, here's a game that pays you to play.
                     </p>
                     <h3 className="font-semibold text-base md:text-xl text-white mb-2 md:mb-3">
                       How it works:
@@ -775,10 +775,6 @@ export default function NoeAlEspacioGame() {
               <a href="https://x.com/therapyorme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
                 <img src="https://unavatar.io/twitter/therapyorme" alt="therapyorme avatar" className="w-8 h-8 rounded-full" />
                 @therapyorme
-              </a>
-              <a href="https://x.com/callmeveizir" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
-                <img src="https://pbs.twimg.com/profile_images/1898650752383623168/nKiI9kYf_400x400.jpg" alt="callmeveizir avatar" className="w-8 h-8 rounded-full" />
-                @callmeveizir
               </a>
             </div>
           </footer>
