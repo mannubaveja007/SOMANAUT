@@ -13,7 +13,7 @@ import { useAccount } from "wagmi"
 import { useToast } from "@/components/ui/use-toast"
 
 // Rutas a los assets en la carpeta public
-const logo = "/images/noealespacio.png"
+const logo = "/images/logo.png"
 const rocketSprite = "/images/coheteanimado.png"
 const spaceJunkImg = "/images/basuraespacial.png"
 const spaceStationImg = "/images/estacionespacial.png"
@@ -52,28 +52,11 @@ type Confetti = {
 
 const FUN_FACTS = [
   {
-    title: "About the Falcon 9 Rocket (SpaceX)",
+    title: "What is a Somanaut?",
     points: [
-      "A two-stage reusable rocket manufactured by SpaceX.",
-      "Transports astronauts and cargo to the International Space Station.",
-      "Its first stage lands back on Earth to reduce space debris.",
-    ],
-  },
-  {
-    title: "About Space Junk",
-    points: [
-      "Remains of satellites, rockets, and fragments orbiting the planet.",
-      "Even small objects can damage active spacecraft due to their speed.",
-      "It's a real problem for astronauts in orbit.",
-    ],
-  },
-  {
-    title: "Who is Noe Castro?",
-    points: [
-      "Biomedical engineer from Salta, Argentina.",
-      "Selected by Axiom Space to become the first female Argentine astronaut.",
-      "Trained in simulated flights, microgravity, and spacesuits.",
-      "Her mission aims to inspire young people in science and technology throughout Latin America.",
+      "A Somanaut is a brave explorer of the Somnia network.",
+      "They travel through the digital cosmos, collecting rare artifacts and discovering new worlds.",
+      "Somanauts are pioneers of the decentralized future, building a new reality one block at a time.",
     ],
   },
 ]
@@ -101,6 +84,9 @@ export default function NoeAlEspacioGame() {
   const { isMuted, audio, isAudioReady, initializeAudio } = useSoundContext()
   const [userHasInteracted, setUserHasInteracted] = useState(false)
   const [hasClaimedTokens, setHasClaimedTokens] = useState(false)
+  const [isAirdropping, setIsAirdropping] = useState(false)
+  const [showImportGuide, setShowImportGuide] = useState(false)
+  const [lastAirdropTime, setLastAirdropTime] = useState(0)
 
   const { address: userAddress } = useAccount()
   const { toast } = useToast()
@@ -291,14 +277,27 @@ export default function NoeAlEspacioGame() {
     floatingTexts.current.push({ id: Date.now() + Math.random(), x, y, text: `+${points}`, opacity: 1 })
   }
 
-  const triggerAirdrop = async (address: string, currentScore: number) => {
+  const triggerAirdrop = async (address: string) => {
+    if (isAirdropping) return;
+
+    const now = Date.now();
+    if (now - lastAirdropTime < 9000) { // 9 second cooldown
+      toast({
+        title: "Airdrop Cooldown",
+        description: "You can claim an airdrop every 10 seconds.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAirdropping(true);
     setHasClaimedTokens(true) // Mark as claimed immediately to prevent re-triggers
-    const amount = currentScore / 100
+    const amount = 700
 
     console.log(`Attempting to airdrop ${amount} tokens to ${address}...`)
 
     try {
-      const response = await fetch("http://localhost:5000/airdrop", {
+      const response = await fetch("https://soma-backend-yvhf.onrender.com/airdrop", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -312,6 +311,7 @@ export default function NoeAlEspacioGame() {
       const data = await response.json()
 
       if (data.success) {
+        setLastAirdropTime(now);
         toast({
           title: "Success!",
           description: "Your amount has been transferred to your wallet!",
@@ -332,6 +332,8 @@ export default function NoeAlEspacioGame() {
         variant: "destructive",
       })
       console.error("Error calling airdrop API:", error)
+    } finally {
+      setIsAirdropping(false);
     }
   }
 
@@ -351,7 +353,7 @@ export default function NoeAlEspacioGame() {
         // Check if score crosses the threshold and tokens haven't been claimed yet
         if (newScore >= 40 && !hasClaimedTokens) {
           if (userAddress) {
-            triggerAirdrop(userAddress, newScore)
+            triggerAirdrop(userAddress)
           } else {
             console.warn("Cannot trigger airdrop. User not connected.")
             toast({
@@ -672,7 +674,7 @@ export default function NoeAlEspacioGame() {
           <div className="animate-fade-in-up opacity-0 [animation-delay:0.2s]">
             <Image
               src={logo || "/placeholder.svg"}
-              alt="Noe to Space Logo"
+              alt="somanaut Logo"
               width={350}
               height={250}
               priority
@@ -692,32 +694,51 @@ export default function NoeAlEspacioGame() {
                   }}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 md:py-5 px-4 md:px-8 rounded-xl text-lg md:text-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl transform"
                 >
-                  🚀 Start Game
+                  🧑‍🚀 Start Game
                 </button>
-                <a
-                  href="https://x.com/callmeveizir/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full glass-button text-sky-300 font-bold py-2 md:py-4 px-4 md:px-8 rounded-xl text-sm md:text-lg flex items-center justify-center gap-2 md:gap-3 transition-all duration-300 hover:scale-105"
+                <button
+                  onClick={() => {
+                    if (userAddress) {
+                      triggerAirdrop(userAddress);
+                    }
+                  }}
+                  disabled={!userAddress || isAirdropping}
+                  className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 md:py-5 px-4 md:px-8 rounded-xl text-lg md:text-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  📱 Visit Noel de Castro's Instagram <ExternalLink size={16} className="md:w-5 md:h-5" />
-                </a>
+                  {isAirdropping ? <LoadingSpinner /> : "💧 Claim Airdrop"}
+                </button>
+                <button
+                  onClick={() => setShowImportGuide(true)}
+                  className="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 md:py-5 px-4 md:px-8 rounded-xl text-lg md:text-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl transform"
+                >
+                  ℹ️ How to Import SOMACOIN
+                </button>
+                
                 <div className="border-t border-white/20 my-1 md:my-2"></div>
                 <div className="flex-1 animate-scale-in opacity-0 [animation-delay:1s]">
                   <h2 className="text-lg md:text-2xl font-bold text-sky-300 mb-3 md:mb-6 flex items-center gap-2">
-                    ✨ Fun Fact
+                    💡 What is SOMACOIN?
                   </h2>
                   <div>
+                    <p className="text-xs md:text-sm leading-relaxed text-gray-200 mb-4">
+                      SOMACOIN is a digital currency that you can earn by playing somanaut. It's like the points you get in the game, but with real-world value.
+                    </p>
                     <h3 className="font-semibold text-base md:text-xl text-white mb-2 md:mb-3">
-                      {randomCuriosity.title}
+                      How it works:
                     </h3>
                     <ul className="space-y-1 md:space-y-2 text-gray-200">
-                      {randomCuriosity.points.map((point, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-blue-400 mt-1">•</span>
-                          <span className="text-xs md:text-sm leading-relaxed">{point}</span>
-                        </li>
-                      ))}
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-400 mt-1">•</span>
+                        <span className="text-xs md:text-sm leading-relaxed"><strong>Play to Earn:</strong> Score points in the game to earn SOMACOIN.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-400 mt-1">•</span>
+                        <span className="text-xs md:text-sm leading-relaxed"><strong>Claim Your Tokens:</strong> Use the airdrop feature to transfer your SOMACOIN to your crypto wallet.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-400 mt-1">•</span>
+                        <span className="text-xs md:text-sm leading-relaxed"><strong>Own Your Rewards:</strong> Once in your wallet, you truly own your SOMACOIN. You can trade it, sell it, or use it in other applications.</span>
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -749,20 +770,58 @@ export default function NoeAlEspacioGame() {
             </div>
           </div>
           <footer className="mt-4 md:mt-12 text-gray-400 text-center pb-3 md:pb-8 animate-fade-in-up opacity-0 [animation-delay:1.2s]">
-            <p className="text-xs md:text-lg">
-              Made in Salta by @artugrande –{" "}
-              <a
-                href="https://www.desafia.tech"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-400 hover:text-sky-300 transition-colors underline decoration-2 underline-offset-4"
-              >
-                www.desafia.tech
+            <p className="mb-2">Made with love by</p>
+            <div className="flex justify-center items-center gap-4">
+              <a href="https://x.com/therapyorme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
+                <img src="https://unavatar.io/twitter/therapyorme" alt="therapyorme avatar" className="w-8 h-8 rounded-full" />
+                @therapyorme
               </a>
-            </p>
+              <a href="https://x.com/callmeveizir" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sky-400 hover:text-sky-300 transition-colors">
+                <img src="https://unavatar.io/twitter/callmeveizir" alt="callmeveizir avatar" className="w-8 h-8 rounded-full" />
+                @callmeveizir
+              </a>
+            </div>
           </footer>
         </div>
       </div>
+      {showImportGuide && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="glass-card p-8 rounded-2xl max-w-lg w-full text-white">
+            <h2 className="text-2xl font-bold mb-4">How to Import SOMACOIN</h2>
+            <p className="mb-4">To see your SOMACOIN balance in your wallet, you need to add the Somnia testnet and import the token.</p>
+            <div className="mb-4">
+              <h3 className="font-bold">1. Add Somnia Testnet to MetaMask</h3>
+              <ul className="list-disc list-inside pl-4">
+                <li>Open MetaMask and click on the network dropdown.</li>
+                <li>Select "Add Network" or "Custom RPC".</li>
+                <li>Enter the following details:</li>
+                <ul className="list-disc list-inside pl-8">
+                  <li><strong>Network Name:</strong> Somnia Testnet</li>
+                  <li><strong>RPC URL:</strong> https://dream-rpc.somnia.network/</li>
+                  <li><strong>Chain ID:</strong> 50312</li>
+                  <li><strong>Currency Symbol:</strong> STT</li>
+                  <li><strong>Block Explorer URL:</strong> https://somnia-testnet.socialscan.io/</li>
+                </ul>
+              </ul>
+            </div>
+            <div className="mb-4">
+              <h3 className="font-bold">2. Import SOMACOIN</h3>
+              <ul className="list-disc list-inside pl-4">
+                <li>Once you are on the Somnia Testnet, click on "Import Tokens".</li>
+                <li>Enter the following contract address:</li>
+                <li className="text-sm break-all"><strong>0xce5fFe8092C734811082C166E5931Ff8d7E41806</strong></li>
+                <li>The token symbol (SOMA) and decimals should be automatically detected.</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => setShowImportGuide(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl mt-4"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 

@@ -11,7 +11,7 @@ const walletConnectProjectId = "1a728404ebbfc00cd74a8c8b25cc9db1"
 
 const config = createConfig(
   getDefaultConfig({
-    appName: "Noe to Space Game",
+    appName: "somanaut Game",
     chains: [mainnet, polygon, optimism, arbitrum],
     walletConnectProjectId: walletConnectProjectId,
   }),
